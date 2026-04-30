@@ -3,8 +3,11 @@ from dotenv import load_dotenv
 from langgraph.graph import StateGraph , END , START
 from typing import TypedDict
 import os
+from github_utils import fetch_pr_diff, post_github_comment
 
 load_dotenv()
+pr_url = "https://github.com/subbarayudu8660/test-pr-agent/pull/1"
+
 
 client = OpenAI(api_key =  os.getenv("OPENAI_API_KEY"))
 
@@ -123,13 +126,14 @@ graph.add_edge("ranker", END)
 
 app = graph.compile()
 
-result = app.invoke({"code": """
-def get_user(user_id):
-    query = "SELECT * FROM users WHERE id = " + user_id
-    result = db.execute(query)
-    password = result['password']
-    return result
-"""})
+print("Fetching PR diff...")
+code = fetch_pr_diff(pr_url)
 
-print("=== FINAL REVIEW ===")
+print("Running review agents...")
+result = app.invoke({"code": code})
+
+print("Posting comment to GitHub...")
+post_github_comment(pr_url, result['final_review'])
+
+print("\n=== FINAL REVIEW ===")
 print(result['final_review'])
